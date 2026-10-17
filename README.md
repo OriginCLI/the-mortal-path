@@ -10,7 +10,7 @@ There are no image or audio files in the repository.
 
 ## Status
 
-**Phase 1: Design Trials (done).** `/design/` holds a gamified design questionnaire. It is a short murim
+**Phase 1: Design Trials (built).** `/design/` holds a gamified design questionnaire. It is a short murim
 journey of twelve trials, one per design topic, and sealing trials raises your realm. Each trial has
 cards, sliders, rankings and notes, with live previews: sample event text, a faction map, UI mockups,
 synthesized music and sound, combat demos, and a lifespan simulation. At the end it generates a design
@@ -67,7 +67,7 @@ design/css/design.css    styles
 design/js/main.js        app shell: routing, header/realm, views, breakthrough overlay
 design/js/trials.js      the twelve trials: questions, options and defaults (data only)
 design/js/widgets.js     card / slider / rank / text / notes inputs
-design/js/previews.js    live preview for each trial
+design/js/previews/       one live preview module per trial (+ lore.js: shared terms, voices, realm ladders)
 design/js/art.js         SVG art: mountain path map, backdrops, seals, portraits, qi field
 design/js/audio.js       Web Audio synthesis: instruments, ambience, themes, sound effects
 design/js/spec.js        Markdown + JSON spec generation, export/import
