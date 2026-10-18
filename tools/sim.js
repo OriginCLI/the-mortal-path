@@ -24,7 +24,7 @@ function act(g) {
   while (L.actions > 0 && !L.pending && !L.dead && guard++ < 6) {
     const acts = g.availableActivities().map(([id]) => id).filter((id) => id !== 'seclusion' && id !== 'journal');
     if (!acts.length) break;
-    if (g.canBreakthrough() && policy.chance(0.7)) { g.attemptBreakthrough(); out.actions++; continue; }
+    if (g.canBreakthrough() && (g.breakthroughOdds() >= 0.55 ? policy.chance(0.7) : policy.chance(0.08))) { g.attemptBreakthrough(); out.actions++; continue; }
     const weights = { meditate: 4, train: 4, work: 2, study: 1.5, wander: 1.5, tavern: 1, doctor: L.stats.health < 50 ? 4 : 0.2, gamble: 0.3, play: 3 };
     const id = policy.weighted(acts, (a) => weights[a] ?? 1);
     g.doActivity(id, id === 'gamble' ? { bet: 3, guess: policy.chance(0.5) ? 'big' : 'small' } : {});
@@ -61,7 +61,8 @@ function resolvePending(g) {
     const ok = p.choices.map((c, i) => [c, i]).filter(([c]) => !c.locked);
     // A sensible player usually avoids choices hinted as deadly or badly outmatched.
     const scary = (c) => /deadly|outmatched|very risky/.test(c.hint || '');
-    const [, i] = policy.weighted(ok, ([c]) => (scary(c) ? 0.15 : 1));
+    const hard = (c) => /hard fight|to the death/.test(c.hint || '');
+    const [, i] = policy.weighted(ok, ([c]) => (scary(c) ? 0.15 : hard(c) ? 0.5 : 1));
     out.choices++;
     g.choose(i, p.game ? policy.next() : null);
   } else if (p.kind === 'combat') {
@@ -69,6 +70,8 @@ function resolvePending(g) {
     let guard = 0;
     while (g.life.pending === p && !p.done && guard++ < 30) {
       const exits = g.combatExits();
+      // A sensible player breaks off a fight that is going badly.
+      if (g.myCombatHp() < 45 && policy.chance(0.5)) { g.combatAct(p.lethal < 0.5 && exits.some((e) => e.id === 'yield') && policy.chance(0.6) ? 'yield' : 'flee'); continue; }
       if (exits.some((e) => e.id === 'auto') && policy.chance(0.5)) { g.combatAct('auto'); continue; }
       if (policy.chance(0.05)) { g.combatAct(policy.pick(exits).id); continue; }
       const opts = g.combatOptions().filter((o) => o.affordable);

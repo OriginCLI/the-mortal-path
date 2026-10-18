@@ -371,7 +371,7 @@ export const lifeSystem = {
     const it = ITEMS[id];
     if (!it || !(L.items[id] > 0) || it.kind !== 'elixir') return false;
     this.addItem(id, -1);
-    if (it.qi) this.addQi(it.qi);
+    if (it.qi) this.addQi(this.scaledQi(it.qi));
     if (it.health) this.addStat('health', it.health);
     if (it.heart) this.addStat('sanity', it.heart);
     if (it.body) this.addStat('body', it.body);

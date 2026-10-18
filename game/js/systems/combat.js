@@ -359,12 +359,16 @@ export const combatSystem = {
       if (p.lethal >= 0.4 && !p.foe.beast) p.mercy = true;
     } else if (result === 'lose') {
       fx = spec.lose;
-      const deadly = p.lethal * (0.5 + LETHALITY / 200) * this.difficulty();
-      if (L.stats.health <= 0 || this.rng.chance(deadly)) {
+      // Fail forward: in a fight that is not meant to kill, a beaten fighter usually lives, even bled white.
+      // Judges stop tournament bouts and sparring partners pull their blows.
+      const deadly = p.context === 'spar' || p.context === 'tournament' ? 0 : p.lethal * (0.3 + LETHALITY / 200) * this.difficulty();
+      const bled = L.stats.health <= 0;
+      if ((bled && deadly > 0 && (p.lethal >= 0.3 || this.rng.chance(p.lethal * 2))) || this.rng.chance(deadly)) {
         text = fx?.deathText || `${cap(p.foe.name)} did not stop.`;
         p.died = true;
       } else {
         text = fx?.text || (p.context === 'spar' ? `${cap(p.foe.name)} tapped your chest with two fingers. You lost.` : `You were beaten. ${cap(p.foe.name)} left you in the dirt.`);
+        if (bled) { L.stats.health = 4; text += ' You lived. Barely.'; }
         if (p.context !== 'spar' && p.context !== 'tournament') this.injure({ name: this.rng.pick(['broken ribs', 'deep cut', 'cracked arm', 'internal bruising']), seasons: this.rng.int(2, 5), sev: 0 });
       }
       if (p.foe.key) this.remember(`foe.${p.foe.key}`);
@@ -415,7 +419,7 @@ export const combatSystem = {
       this.addStat('infamy', npc ? 6 : 2);
       if (npc) this.killNpc(npc, `killed by ${L.family} ${L.name}`);
       if (choice === 'absorb') {
-        this.addQi(20 + p.foe.realm * 18);
+        this.addQi(this.scaledQi(20 + p.foe.realm * 18));
         this.addStat('sanity', -12);
         this.addStat('infamy', 8);
         this.addRep('orthodox', -10);

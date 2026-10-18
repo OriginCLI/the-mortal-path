@@ -50,6 +50,9 @@ export const cultivationSystem = {
     this.log(before !== after ? `${line} You have reached ${after}.` : line, 'act');
   },
 
+  // Flat qi from events, pills and absorption is worth less the higher you climb (authored at Third-Rate value).
+  scaledQi(v) { return v * clamp(REALMS[this.life.realm].qi / REALMS[1].qi, 0.06, 1.2); },
+
   addQi(v) {
     const L = this.life;
     if (v <= 0 || L.realm >= MAX_REALM && L.stage >= 2 && L.stats.qi >= 100) return;

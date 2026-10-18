@@ -67,6 +67,7 @@ const HANDLERS = {
   fn: (g, v, ctx) => v(g, ctx),
 };
 for (const s of STATS) HANDLERS[s] = (g, v) => g.addStat(s, v);
+HANDLERS.qi = (g, v) => g.addQi(v > 0 ? g.scaledQi(v) : v);
 
 // Keys an outcome object may carry that are not effects.
 const META_KEYS = new Set(['text', 'title', 'art', 'if']);
