@@ -105,6 +105,14 @@ export const npcSystem = {
 
   // Living NPCs you know with a role. Special groups: family, close, any, sectmate, romance.
   withRole(role, aliveOnly = true) {
+    const key = this.roleCache && `${role}|${aliveOnly}`;
+    if (key && this.roleCache.has(key)) return this.roleCache.get(key);
+    const out = this.findRole(role, aliveOnly);
+    if (key) this.roleCache.set(key, out);
+    return out;
+  },
+
+  findRole(role, aliveOnly) {
     const out = [];
     for (const n of Object.values(this.life.npcs)) {
       if (aliveOnly && n.dead) continue;

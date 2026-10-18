@@ -262,10 +262,16 @@ export class Game {
   // then an event by its own weight.
   drawEvent(on = null) {
     const pools = {};
-    for (const ev of this.candidates(on)) {
-      const ctx = { bind: {} };
-      if (!this.eligible(ev, ctx)) continue;
-      (pools[ev.cat] = pools[ev.cat] || []).push({ ev, bind: ctx.bind, w: this.eventWeight(ev) });
+    // Nobody changes while the deck is drawn, so role lookups are cached for the draw.
+    this.roleCache = new Map();
+    try {
+      for (const ev of this.candidates(on)) {
+        const ctx = { bind: {} };
+        if (!this.eligible(ev, ctx)) continue;
+        (pools[ev.cat] = pools[ev.cat] || []).push({ ev, bind: ctx.bind, w: this.eventWeight(ev) });
+      }
+    } finally {
+      this.roleCache = null;
     }
     const cats = Object.keys(pools);
     if (!cats.length) return null;
@@ -287,6 +293,7 @@ export class Game {
     const byAge = Array.from({ length: 301 }, () => []);
     const byOn = new Map();
     for (const ev of EVENTS.values()) {
+      if (ev.if) ev.if = orderConditions(ev.if);
       if (ev.on) {
         for (const o of asArray(ev.on)) {
           if (!byOn.has(o)) byOn.set(o, []);
@@ -493,6 +500,18 @@ export class Game {
     const r = this.withRole(who, true);
     return r[0] || null;
   }
+}
+
+// Conditions are ANDed, so test the cheap, selective ones first and the costly ones (people, memories,
+// code, chance) last. Done once when events are indexed.
+const COND_FIRST = ['age', 'loc', 'region', 'sect', 'faction', 'career', 'origin', 'gender', 'year', 'realm', 'flag', 'not', 'rank', 'constitution', 'path', 'season', 'locType'];
+const COND_LAST = ['npc', 'met', 'notMet', 'alive', 'dead', 'has', 'hasNot', 'married', 'mem', 'noMem', 'or', 'fn', 'chance'];
+function orderConditions(c) {
+  const keys = Object.keys(c);
+  const rank = (k) => (COND_FIRST.includes(k) ? COND_FIRST.indexOf(k) : COND_LAST.includes(k) ? 100 + COND_LAST.indexOf(k) : 50);
+  const out = {};
+  for (const k of keys.sort((a, b) => rank(a) - rank(b))) out[k] = c[k];
+  return out;
 }
 
 export function pickVariant(text, rng) {
