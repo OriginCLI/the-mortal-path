@@ -3,6 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -11,18 +12,20 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  check:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Check out
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
 
       - name: Check JavaScript syntax
         run: |
@@ -30,17 +33,40 @@ jobs:
             node --input-type=module --check < "$f" || exit 1
           done
 
+      - name: Lint content
+        run: node tools/lint.js
+
+      - name: Simulate lives
+        run: node tools/sim.js --lives 120 --loops 3
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
       - name: Assemble site
         run: |
           mkdir _site
-          cp index.html _site/
-          cp -r design docs _site/
+          cp index.html manifest.webmanifest sw.js _site/
+          cp -r game shared design docs _site/
+          node tools/build-sw.js _site "$GITHUB_SHA"
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Upload site
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: _site
 

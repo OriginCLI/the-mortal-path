@@ -1,0 +1,15 @@
+{
+  "name": "The Mortal Path",
+  "short_name": "Mortal Path",
+  "description": "A murim life simulator. Live one life season by season; when you die, wake as a child again, remembering everything.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#efe6d2",
+  "theme_color": "#2a2420",
+  "icons": [
+    { "src": "game/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "game/img/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
