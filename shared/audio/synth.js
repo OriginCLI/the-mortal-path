@@ -623,6 +623,84 @@ export function ambience(kind, level = 0.6, dest = null) {
     }, 110));
   }
 
+  if (kind === 'water') {
+    // A slow swell of lapping water: low noise breathing in and out, with small splashes.
+    const n = noise(true);
+    const lp = filter('lowpass', 520, 0.8);
+    const amp = gainNode(0.22);
+    const lfo = osc('sine', 0.11);
+    const lg = gainNode(0.14);
+    lfo.connect(lg).connect(amp.gain);
+    const lfo2 = osc('sine', 0.05);
+    const lg2 = gainNode(180);
+    lfo2.connect(lg2).connect(lp.frequency);
+    n.connect(lp).connect(amp).connect(out);
+    [n, lfo, lfo2].forEach((x) => x.start(t));
+    add(n, lfo, lfo2);
+    timers.push(setInterval(() => {
+      if (Math.random() < 0.55) return;
+      const at = ctx.currentTime + Math.random() * 0.3;
+      const c = noise();
+      const bp = filter('bandpass', 700 + Math.random() * 900, 1.4);
+      const cg = gainNode(0);
+      envelope(cg.gain, at, 0.12 + Math.random() * 0.1, 0.03, at + 0.25 + Math.random() * 0.2);
+      c.connect(bp).connect(cg).connect(out);
+      c.start(at, Math.random());
+      c.stop(at + 0.6);
+    }, 700));
+  }
+  if (kind === 'crowd') {
+    // A town murmur: voice-band noise that rises and falls, with distant calls and cart wheels.
+    const n = noise(true);
+    const bp = filter('bandpass', 650, 0.7);
+    const bp2 = filter('peaking', 1300, 1.2);
+    bp2.gain.value = 4;
+    const amp = gainNode(0.16);
+    const lfo = osc('sine', 0.17);
+    const lg = gainNode(0.05);
+    lfo.connect(lg).connect(amp.gain);
+    n.connect(bp).connect(bp2).connect(amp).connect(out);
+    [n, lfo].forEach((x) => x.start(t));
+    add(n, lfo);
+    timers.push(setInterval(() => {
+      const at = ctx.currentTime + Math.random() * 0.5;
+      if (Math.random() < 0.35) {
+        // A far-off vendor's call: a short vowel glide.
+        const f = 180 + Math.random() * 140;
+        const o = osc('sawtooth', f);
+        o.frequency.setValueAtTime(f, at);
+        o.frequency.linearRampToValueAtTime(f * (Math.random() < 0.5 ? 1.25 : 0.85), at + 0.5);
+        const formant = filter('bandpass', 800 + Math.random() * 400, 6);
+        const g = gainNode(0);
+        envelope(g.gain, at, 0.03, 0.08, at + 0.6);
+        o.connect(formant).connect(g).connect(out);
+        o.start(at);
+        o.stop(at + 0.8);
+      } else if (Math.random() < 0.3) {
+        inst.woodblock(at, 0.08, out, 300 + Math.random() * 300);
+      }
+    }, 1300));
+  }
+  if (kind === 'insects') {
+    // Summer-night crickets: pulsed high tones in loose chorus.
+    const cricket = (f, rate) => {
+      const o = osc('sine', f);
+      const g = gainNode(0);
+      const pulse = osc('square', rate);
+      const pg = gainNode(0.025);
+      pulse.connect(pg).connect(g.gain);
+      const slow = osc('sine', 0.2 + Math.random() * 0.3);
+      const sg = gainNode(0.02);
+      slow.connect(sg).connect(g.gain);
+      o.connect(g).connect(out);
+      [o, pulse, slow].forEach((x) => x.start(t + Math.random()));
+      add(o, pulse, slow);
+    };
+    cricket(4200, 18);
+    cricket(4650, 22);
+    cricket(3900, 15);
+  }
+
   return () => {
     timers.forEach(clearInterval);
     out.gain.setTargetAtTime(0, ctx.currentTime, 0.25);

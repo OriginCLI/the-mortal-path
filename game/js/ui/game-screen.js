@@ -111,7 +111,11 @@ class GameScreen {
 
   onGame(type, data) {
     switch (type) {
-      case 'log': this.appendEntry(data); break;
+      case 'log':
+        this.appendEntry(data);
+        if (data.k === 'rank') director.moment('triumph');
+        else if (data.k === 'grief') director.moment('sorrow');
+        break;
       case 'update': this.refresh(); break;
       case 'pending':
         if (data.kind === 'event') openEventModal(this, data);
@@ -120,11 +124,15 @@ class GameScreen {
       case 'combat': updateCombatModal(this, data); break;
       case 'resolved': break;
       case 'death': setTimeout(() => openDeath(this), 600); break;
-      case 'breakthrough': openCeremony(this, data); director.sfx('breakthrough'); break;
+      case 'breakthrough': openCeremony(this, data); director.sfx('breakthrough'); director.moment('triumph'); break;
       case 'codex': if (data.entry.cat !== 'timeline' && data.entry.cat !== 'theory') toast(`<b>You will remember this.</b> ${data.entry.title}`, 'memory', 3200); break;
       case 'achievement': toast(`Achievement: <b>${data.name}</b>. ${data.desc}`, 'ach', 4200); director.sfx('seal'); break;
       case 'sfx': director.sfx(data); break;
-      case 'mood': director.setMood(data); if (data !== 'danger') director.rest(data); break;
+      case 'mood':
+        if (data === 'danger') director.setMood('danger');
+        else if (data === 'calm') director.calm();
+        else director.moment(data);
+        break;
       case 'regressed': this.onRegressed(); break;
       case 'travel': this.refresh(true); break;
       case 'openJournal': openPanel('journal', this); break;
@@ -178,6 +186,18 @@ class GameScreen {
     this.seal.title = g.stageLabel();
     this.renderStats();
     this.renderDock();
+    director.rest(this.restingMood());
+  }
+
+  // The music's resting mood from the state of the life.
+  restingMood() {
+    const g = this.g;
+    const L = g.life;
+    if (L.dead) return 'sorrow';
+    if (g.age < 10) return 'childhood';
+    if (L.stats.health < 30 || L.stats.sanity < 25 || L.poisoned || g.meta.gaze >= 12) return 'tension';
+    if (L.inSeclusion) return 'ambient';
+    return 'calm';
   }
 
   renderStats() {

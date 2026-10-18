@@ -38,6 +38,8 @@ function showModal(content, { cls = '', label = 'Dialog', onKey } = {}) {
 export function openEventModal(ui, p) {
   const g = ui.g;
   director.duck(true);
+  if (p.cat === 'fortune') director.moment('wonder');
+  else if (p.cat === 'war' || (p.cat === 'timeline' && p.art && ['fire', 'war', 'battlefield', 'flood', 'plague'].includes(p.art))) director.moment('tension');
   const season = g.life.turn % 4;
   const choose = (i) => {
     const c = p.choices[i];

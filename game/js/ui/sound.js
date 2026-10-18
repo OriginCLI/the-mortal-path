@@ -26,6 +26,7 @@ class Director {
     this.wantBeds = [];
     this.ducked = false;
     this.restMood = 'calm';
+    this.inMoment = false;
   }
 
   // Browsers need a gesture first; the app calls this on the first tap (spec: on after first tap).
@@ -55,11 +56,25 @@ class Director {
     this.timer = setTimeout(() => this.playNext(), m === 'danger' ? 200 : 1600);
   }
 
-  rest(m) { this.restMood = m; if (this.mood !== 'danger') this.setMood(m); }
+  // The resting mood follows the state of the life (childhood, calm, tension, sorrow).
+  rest(m) { if (!MOODS[m]) return; this.restMood = m; if (this.mood !== 'danger' && !this.inMoment) this.setMood(m); }
+
+  // A moment (triumph, wonder, sorrow) plays one theme, then the music returns to the resting mood.
+  moment(m) {
+    if (!MOODS[m] || this.mood === 'danger') return;
+    this.inMoment = true;
+    if (this.mood === m) return;
+    this.setMood(m);
+  }
+
+  // Leaving combat: back to whatever the life is like now.
+  calm() { this.inMoment = false; if (this.mood === 'danger') { this.mood = ''; this.setMood(this.restMood); } }
 
   playNext() {
     if (!this.started || !settings.sound) { this.timer = setTimeout(() => this.playNext(), 3000); return; }
+    if (this.momentPlayed) { this.momentPlayed = false; this.inMoment = false; this.mood = this.restMood; }
     const p = MOODS[this.mood];
+    if (this.inMoment) this.momentPlayed = true;
     this.seed = (this.seed * 31 + 7) % 10007;
     this.theme = synth.playTheme({ instruments: INSTRUMENTS, music: p.music, scale: p.scale, tempo: p.tempo, seed: this.seed, dest: synth.channel('music'), gain: 0.9 });
     // A breath of silence between themes keeps the music from becoming wallpaper.
@@ -73,9 +88,11 @@ class Director {
   setAmbience(scene, season, weather, travelling) {
     const beds = [];
     if (weather === 'rain') beds.push('rain');
-    if (['peaks', 'snow', 'desert', 'demonic'].includes(scene) || season === 3) beds.push('wind');
+    if (['lake', 'river'].includes(scene)) beds.push('water');
+    if (['city', 'palace'].includes(scene) && !travelling) beds.push('crowd');
     if (['temple'].includes(scene)) beds.push('temple');
-    if (['village', 'forest', 'lake', 'river', 'estate'].includes(scene) && (season === 0 || season === 1) && weather !== 'rain') beds.push('birds');
+    if (['peaks', 'snow', 'desert', 'demonic'].includes(scene) || season === 3) beds.push('wind');
+    if (['village', 'forest', 'lake', 'river', 'estate'].includes(scene) && weather !== 'rain') beds.push(season === 1 || season === 2 ? 'insects' : 'birds');
     if (travelling || scene === 'demonic') beds.push('fire');
     if (!beds.length) beds.push('wind');
     this.wantBeds = beds.slice(0, 2);
@@ -85,7 +102,7 @@ class Director {
   syncBeds() {
     if (!this.started) return;
     for (const [k, stop] of this.beds) if (!this.wantBeds.includes(k)) { stop(); this.beds.delete(k); }
-    for (const k of this.wantBeds) if (!this.beds.has(k)) this.beds.set(k, synth.ambience(k, k === 'birds' ? 0.5 : 0.6, synth.channel('ambience')));
+    for (const k of this.wantBeds) if (!this.beds.has(k)) this.beds.set(k, synth.ambience(k, { birds: 0.5, insects: 0.35, crowd: 0.5 }[k] ?? 0.6, synth.channel('ambience')));
   }
 
   sfx(name) { if (this.started && settings.sound) synth.sfx(name, { intensity: 1 }); }
