@@ -166,7 +166,7 @@ export const wheelSystem = {
         continue;
       }
       // Personal history: if you are there, your choices in the witness event decide what happens.
-      const present = !t.loc || t.loc === L.loc || (t.region && LOCATIONS[L.loc].region === t.region);
+      const present = t.loc ? t.loc === L.loc : t.region ? LOCATIONS[L.loc].region === t.region : true;
       if (t.personal && present && !silent && t.witness) {
         L.timeline[t.id] = 'witnessing';
         this.schedule(t.witness, 0);
@@ -243,6 +243,17 @@ export const wheelSystem = {
   },
 
   canRegress() { return this.meta.wheel.mode !== 'ironman'; },
+
+  // Later loops: drift through ages 0–5 as a montage, stopping for anything new or marked.
+  driftChildhood() {
+    const L = this.life;
+    L.montage = true;
+    let guard = 0;
+    while (this.age < 6 && this.canAdvance() && guard++ < 30) this.nextSeason();
+    if (this.age >= 6) this.log('Your early childhood passed much as you remembered it.', 'note');
+    this.emit('update');
+  },
+
 
   regress() {
     if (!this.life.dead) return;

@@ -67,7 +67,7 @@ export const combatSystem = {
       intro: spec.text ? this.fill(spec.text, ctx) : null,
       foe, ex: 0, max: spec.max || MAX_EXCHANGES,
       you: { qi: this.combatQi(), maxQi: this.combatQi(), start: L.stats.health },
-      lines: [], bind: ctx.bind || {}, spec: stripFns(spec), done: false,
+      lines: spec.text ? [{ ex: 0, text: this.fill(spec.text, ctx) }] : [], bind: ctx.bind || {}, spec: stripFns(spec), done: false,
       tricks: { lime: false },
     };
     L.tally.fights += 1;
@@ -371,7 +371,6 @@ export const combatSystem = {
     p.outcomeText = this.fill(text, ctx);
     p.outcomeFx = fx ? stripText(fx) : null;
     this.emit('combat', { end: result });
-    if (!p.mercy) this.finishCombat();
   },
 
   // After a lethal win you choose: spare, kill, or (demonic) absorb their qi.

@@ -73,6 +73,7 @@ function resolvePending(g) {
       g.combatAct(policy.weighted(opts, (o) => (o.kind === 'heavy' ? 2 : o.kind === 'strike' ? 3 : 1)).id);
     }
     if (g.life.pending === p && p.mercy) g.mercy(policy.pick(g.mercyOptions()).id);
+    if (g.life.pending === p && p.done) g.finishCombat();
   }
 }
 

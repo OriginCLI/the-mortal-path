@@ -324,6 +324,24 @@ export const lifeSystem = {
     return city;
   },
 
+  // Bookstalls in cities sell common manuals: the front door to cultivation for commoners.
+  bookstall() {
+    const t = this.loc.type;
+    if (t !== 'city' && t !== 'frontier') return [];
+    const out = [['breath_basic', 20], ['fist_basic', 8], ['sword_basic', 10], ['step_basic', 12]];
+    if (['luoyang', 'hangzhou', 'kaifeng'].includes(this.life.loc)) out.push(['escort_spear', 60], ['ext_iron_shirt', 45]);
+    return out;
+  },
+
+  buyManual(id) {
+    const offer = this.bookstall().find(([m]) => m === id);
+    if (!offer || id in this.life.manuals || this.life.stats.wealth < offer[1]) return false;
+    this.addStat('wealth', -offer[1]);
+    this.learnManual(id);
+    this.pump();
+    return true;
+  },
+
   price(id) {
     // Scarcity 50: elixirs cost a premium.
     const it = ITEMS[id];

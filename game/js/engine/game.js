@@ -399,7 +399,7 @@ export class Game {
       });
     if (ev.fx?.music || ev.mood) this.emit('mood', ev.mood || ev.fx.music);
     if (!choices.length || choices.every((c) => c.locked)) {
-      this.log(text, ev.fmt === 'letter' ? 'letter' : 'event', { cat: ev.cat, art: ev.art, title, from: ev.from ? this.npcName(ev.from, ctx) : undefined });
+      this.log(text, ev.fmt === 'letter' ? 'letter' : 'event', { id: ev.id, cat: ev.cat, art: ev.art, title, from: ev.from ? this.npcName(ev.from, ctx) : undefined });
       apply(this, ev.fx, ctx);
       if (ev.art) this.emit('art', ev.art);
       return;
@@ -460,7 +460,7 @@ export class Game {
     this.life.pending = null;
     const result = outcome?.text ? this.fill(pickVariant(outcome.text, this.rng), ctx) : '';
     this.log(p.text, ev.fmt === 'letter' ? 'letter' : 'event', {
-      cat: p.cat, art: p.art, title: p.title, from: p.from, c: ch.label, r: result, ok: success,
+      id: ev.id, cat: p.cat, art: p.art, title: p.title, from: p.from, c: ch.label, r: result, ok: success,
     });
     apply(this, c.fx, ctx);
     if (!this.life.dead) apply(this, outcome, ctx);

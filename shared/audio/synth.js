@@ -17,10 +17,14 @@ function rng(seed = 1) {
 
 let ctx = null;
 let bus = null;       // instruments -> bus -> (dry + reverb) -> master
+let busNode = null;
+let routeOverride = null; // sfx temporarily route instruments into the sfx channel
+const route = () => routeOverride || bus;
 let master = null;
 let analyser = null;
 let noiseBuf = null;
-const settings = { sfx: true, volume: 0.7 };
+const channels = {};
+const settings = { sfx: true, volume: 0.7, channels: { music: 0.6, ambience: 0.5, sfx: 0.8 } };
 const ksCache = new Map();
 
 export function configure({ sound, volume }) {
@@ -48,6 +52,7 @@ function ac() {
     analyser = ctx.createAnalyser();
     analyser.fftSize = 1024;
     bus = ctx.createGain();
+    busNode = bus;
     const verb = ctx.createConvolver();
     verb.buffer = impulse(2.8, 2.6);
     const wet = ctx.createGain();
@@ -60,12 +65,25 @@ function ac() {
     master.connect(analyser);
     analyser.connect(ctx.destination);
     noiseBuf = makeNoise(2);
+    for (const name of ['music', 'ambience', 'sfx']) {
+      channels[name] = ctx.createGain();
+      channels[name].gain.value = settings.channels[name];
+      channels[name].connect(bus);
+    }
   }
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
 }
 
 export const getAnalyser = () => analyser;
+
+// Separate volume channels (music / ambience / sfx). The design tool ignores them; the game uses them.
+export function channel(name) { return ac() ? channels[name] : null; }
+export function setChannelVolume(name, v, ramp = 0.1) {
+  settings.channels[name] = v;
+  if (channels[name]) channels[name].gain.setTargetAtTime(v, ctx.currentTime, ramp);
+}
+export function resume() { return ac(); }
 export const now = () => (ac() ? ctx.currentTime : 0);
 
 // ── Building blocks ────────────────────────────────────────────────
@@ -168,7 +186,7 @@ function ksBuffer(freq, seconds, bright) {
 
 // ── Instruments (t = start time, f = Hz) ───────────────────────────
 export const inst = {
-  pluck(t, f, dur = 2.4, vel = 0.6, out = bus, { bend = 0, vib = 0.004 } = {}) {
+  pluck(t, f, dur = 2.4, vel = 0.6, out = route(), { bend = 0, vib = 0.004 } = {}) {
     const src = ctx.createBufferSource();
     src.buffer = ksBuffer(f, Math.min(4, Math.max(1.2, dur + 0.8)), 0.55);
     if (bend) {
@@ -187,7 +205,7 @@ export const inst = {
     src.stop(t + dur + 1);
   },
 
-  flute(t, f, dur = 1, vel = 0.5, out = bus, { vib = 0.012, fall = 0 } = {}) {
+  flute(t, f, dur = 1, vel = 0.5, out = route(), { vib = 0.012, fall = 0 } = {}) {
     const end = t + dur + 0.3;
     const o = osc('sine', f);
     const o2 = osc('triangle', f * 2);
@@ -223,7 +241,7 @@ export const inst = {
     [o, o2, n].forEach((x) => { x.start(t); x.stop(end + 0.5); });
   },
 
-  bowed(t, f, dur = 1.2, vel = 0.5, out = bus, { vib = 0.011, slide = 1 } = {}) {
+  bowed(t, f, dur = 1.2, vel = 0.5, out = route(), { vib = 0.011, slide = 1 } = {}) {
     const end = t + dur + 0.4;
     const env = gainNode(0);
     env.gain.setValueAtTime(0.0001, t);
@@ -246,7 +264,7 @@ export const inst = {
     lp.connect(nasal).connect(env).connect(out);
   },
 
-  gong(t, f = 98, vel = 0.7, out = bus, length = 1) {
+  gong(t, f = 98, vel = 0.7, out = route(), length = 1) {
     const ratios = [1, 1.52, 2.03, 2.66, 3.21, 4.07, 5.11, 6.3];
     const amps = [1, 0.6, 0.48, 0.36, 0.26, 0.2, 0.13, 0.08];
     const decays = [6.5, 5, 4, 3, 2.4, 1.8, 1.3, 0.9];
@@ -270,7 +288,7 @@ export const inst = {
     n.stop(t + 0.5);
   },
 
-  bell(t, f = 196, vel = 0.6, out = bus, length = 1) {
+  bell(t, f = 196, vel = 0.6, out = route(), length = 1) {
     const ratios = [0.5, 1, 1.183, 1.506, 2, 2.514, 2.662, 3.011, 4.166];
     const amps = [0.5, 1, 0.55, 0.35, 0.45, 0.25, 0.22, 0.18, 0.1];
     ratios.forEach((r, i) => {
@@ -284,7 +302,7 @@ export const inst = {
     });
   },
 
-  drum(t, vel = 0.8, out = bus, pitch = 1) {
+  drum(t, vel = 0.8, out = route(), pitch = 1) {
     const o = osc('sine', 150 * pitch);
     o.frequency.setValueAtTime(150 * pitch, t);
     o.frequency.exponentialRampToValueAtTime(48 * pitch, t + 0.28);
@@ -305,7 +323,7 @@ export const inst = {
     [o, skin, n].forEach((x) => { x.start(t); x.stop(t + 0.9); });
   },
 
-  woodblock(t, vel = 0.4, out = bus, f = 640) {
+  woodblock(t, vel = 0.4, out = route(), f = 640) {
     const o = osc('sine', f);
     o.frequency.setValueAtTime(f, t);
     o.frequency.exponentialRampToValueAtTime(f * 0.88, t + 0.08);
@@ -319,7 +337,7 @@ export const inst = {
     [o, o2].forEach((x) => { x.start(t); x.stop(t + 0.2); });
   },
 
-  clash(t, vel = 0.6, out = bus) {
+  clash(t, vel = 0.6, out = route()) {
     const n = noise();
     const hp = filter('highpass', 2800, 0.7);
     const ng = gainNode(0);
@@ -337,7 +355,7 @@ export const inst = {
     });
   },
 
-  swish(t, vel = 0.5, out = bus, up = true) {
+  swish(t, vel = 0.5, out = route(), up = true) {
     const n = noise();
     const bp = filter('bandpass', up ? 500 : 3200, 1.4);
     bp.frequency.setValueAtTime(up ? 500 : 3200, t);
@@ -351,7 +369,7 @@ export const inst = {
     n.stop(t + 0.3);
   },
 
-  drone(t, f, dur, vel = 0.3, out = bus) {
+  drone(t, f, dur, vel = 0.3, out = route()) {
     const lp = filter('lowpass', 420, 0.5);
     const lfo = osc('sine', 0.09);
     const lg = gainNode(160);
@@ -378,9 +396,15 @@ export const inst = {
 const A4 = 440;
 const hz = (semi, base = A4) => base * Math.pow(2, semi / 12);
 
-export function sfx(name, { intensity = 0.6, force = false } = {}) {
-  if (!force && !settings.sfx) return;
+export function sfx(name, opts = {}) {
+  if (!opts.force && !settings.sfx) return;
   if (!ac()) return;
+  routeOverride = channels.sfx || null;
+  try { sfxInner(name, opts); } finally { routeOverride = null; }
+}
+
+function sfxInner(name, { intensity = 0.6 } = {}) {
+  const bus = route();
   const t = ctx.currentTime + 0.01;
   const rich = intensity > 0.45;
   const lush = intensity > 0.75;
@@ -492,12 +516,12 @@ export function demo(name) {
 }
 
 // ── Ambient beds (return a stop function) ──────────────────────────
-export function ambience(kind, level = 0.6) {
+export function ambience(kind, level = 0.6, dest = null) {
   if (!ac()) return () => {};
   const t = ctx.currentTime;
   const out = gainNode(0);
   out.gain.setTargetAtTime(level, t, 0.6);
-  out.connect(bus);
+  out.connect(dest || bus);
   const nodes = [];
   const timers = [];
   const add = (...n) => nodes.push(...n);
@@ -619,13 +643,14 @@ const SCALES = {
 const RHYTHMS = [[2, 1, 1], [1, 1, 2], [3, 1], [1, 1, 1, 1], [2, 2], [1.5, 0.5, 2], [4]];
 
 // Returns { stop, duration }. Instruments and mood come straight from the audio trial's answers.
-export function playTheme({ instruments = [], music = 'ensemble', scale = 'yu', tempo = 76, seed = 7 }) {
+export function playTheme({ instruments = [], music = 'ensemble', scale = 'yu', tempo = 76, seed = 7, dest = null, startAt = 0, gain = 1 }) {
   if (!ac()) return { stop() {}, duration: 0 };
   const r = rng(seed);
-  const out = gainNode(1);
-  out.connect(bus);
+  const out = gainNode(0);
+  out.gain.setTargetAtTime(gain, ctx.currentTime, 0.4);
+  out.connect(dest || bus);
   const beat = 60 / tempo;
-  const t0 = ctx.currentTime + 0.1;
+  const t0 = Math.max(ctx.currentTime + 0.1, startAt);
   const steps = SCALES[scale] || SCALES.yu;
   const sorrow = scale === 'gyemyeonjo';
   const root = scale === 'gung' ? 293.66 : 220; // D or A
@@ -642,7 +667,7 @@ export function playTheme({ instruments = [], music = 'ensemble', scale = 'yu', 
   let d = 5;
   let at = t0;
   for (let bar = 0; bar < bars; bar++) {
-    const danger = music === 'adaptive' && bar >= 4;
+    const danger = (music === 'adaptive' && bar >= 4) || music === 'battle';
     const pattern = sparse ? r.pick([[4], [2, 2], [3, 1]]) : r.pick(RHYTHMS);
     pattern.forEach((len, i) => {
       const last = (bar === 3 || bar === bars - 1) && i === pattern.length - 1;
@@ -687,9 +712,10 @@ export function playTheme({ instruments = [], music = 'ensemble', scale = 'yu', 
   const duration = bars * 4 * beat + 2;
   return {
     duration,
-    stop() {
-      out.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
-      setTimeout(() => out.disconnect(), 1200);
+    end: t0 + bars * 4 * beat,
+    stop(fade = 0.15) {
+      out.gain.setTargetAtTime(0, ctx.currentTime, fade);
+      setTimeout(() => out.disconnect(), 1200 + fade * 4000);
     },
   };
 }
