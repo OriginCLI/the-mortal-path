@@ -13,6 +13,7 @@ import { SECTS, LOCATIONS, FACTIONS, REGIONS } from '../game/js/content/world.js
 import { ACHIEVEMENTS } from '../game/js/content/achievements.js';
 import { ACTIVITIES } from '../game/js/systems/life.js';
 import { GAMES } from '../game/js/content/minigames.js';
+import { ROLE_TITLE } from '../game/js/systems/npcs.js';
 
 const quiet = process.argv.includes('--quiet');
 const errors = [];
@@ -144,6 +145,49 @@ for (const ev of EVENTS.values()) {
     for (const k of ['r', 'ok', 'no']) if (c[k]) checkFx(`${cw}.${k}`, c[k]);
   });
 }
+
+// Every {token} must resolve: built-ins, the event's bound roles, role names, or named NPCs ({@id}).
+const BASE_TOKENS = new Set(['name', 'family', 'fullname', 'son', 'boy', 'brother', 'youngmaster', 'man', 'sir', 'loc', 'home', 'region', 'season', 'year', 'age', 'realm', 'sect', 'rank', 'money']);
+const ROLE_WORDS = new Set([...Object.keys(ROLE_TITLE), 'any', 'family', 'parent', 'close', 'friendly', 'sectmate', 'romance', 'martial', 'hostile']);
+const TOKEN_FIELDS = new Set(['he', 'him', 'his', 'himself', 'man', 'son', 'boy', 'brother', 'master', 'sir', 'husband', 'father', 'title', 'realm', 'nick', 'first']);
+const TEXT_KEYS = new Set(['text', 't', 'title', 'deathText']);
+// Follow-ups scheduled with `next` inherit the bound roles of the events that schedule them.
+const inherited = new Map();
+{
+  const parents = new Map();
+  const collect = (o, from) => { if (!o || typeof o !== 'object') return; if (Array.isArray(o)) return o.forEach((x) => collect(x, from)); for (const [k, v] of Object.entries(o)) { if (k === 'next') [].concat(v).forEach((n) => { const id = typeof n === 'string' ? n : n.id; if (!parents.has(id)) parents.set(id, new Set()); parents.get(id).add(from); }); else collect(v, from); } };
+  for (const e of EVENTS.values()) collect(e, e.id);
+  const rolesOf = (id, depth = 0) => {
+    const e = EVENTS.get(id);
+    const out = new Set(Object.keys(e?.bind || {}));
+    if (depth < 8) for (const p of parents.get(id) || []) rolesOf(p, depth + 1).forEach((r) => out.add(r));
+    return out;
+  };
+  for (const id of parents.keys()) inherited.set(id, rolesOf(id));
+}
+function checkTokens(ev) {
+  const roles = new Set([...Object.keys(ev.bind || {}), ...(inherited.get(ev.id) || [])]);
+  const seen = new Set();
+  const walk = (o) => {
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o)) return o.forEach(walk);
+    for (const [k, v] of Object.entries(o)) {
+      if (TEXT_KEYS.has(k)) [].concat(v).forEach((t) => typeof t === 'string' && (t.match(/\{(@?[A-Za-z_$][\w.$-]*)\}/g) || []).forEach((m) => seen.add(m.slice(1, -1))));
+      else if (k !== 'codex') walk(v);
+    }
+  };
+  walk(ev);
+  for (const key of seen) {
+    const [who, field] = key.split('.');
+    const low = who[0].toLowerCase() + who.slice(1);
+    if (field && !TOKEN_FIELDS.has(field[0].toLowerCase() + field.slice(1))) { err(ev.id, `unknown token field "{${key}}"`); continue; }
+    if (who.startsWith('@')) { if (!ROSTER[who.slice(1)]) err(ev.id, `token {${key}} names an unknown NPC`); continue; }
+    if (!field && BASE_TOKENS.has(low)) continue;
+    if (roles.has(low) || ROLE_WORDS.has(low)) continue;
+    err(ev.id, `token {${key}} will not resolve (not a built-in, a bound role, a role name or {@npc})`);
+  }
+}
+for (const ev of EVENTS.values()) checkTokens(ev);
 
 // Template instances must differ in outcome logic, not just in words.
 const strip = (o) => JSON.stringify(o, (k, v) => (k === 'text' || k === 't' || k === 'title' || k === 'id' || k === 'tpl' || k === 'source' ? undefined : typeof v === 'function' ? v.toString() : v));

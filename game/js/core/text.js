@@ -10,7 +10,7 @@ export function fillText(str, resolve, rng) {
     const opts = body.split('|');
     return opts[Math.floor((rng ? rng.next() : Math.random()) * opts.length)];
   });
-  out = out.replace(/\{([A-Za-z_$][\w.$-]*)\}/g, (m, key) => {
+  out = out.replace(/\{(@?[A-Za-z_$][\w.$-]*)\}/g, (m, key) => {
     let v = resolve(key);
     if (v == null && /^[A-Z]/.test(key)) {
       const low = key[0].toLowerCase() + key.slice(1);
