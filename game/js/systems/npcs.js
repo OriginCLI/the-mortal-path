@@ -79,7 +79,7 @@ export const npcSystem = {
     const npc = {
       id, name: spec.name || `${spec.family || this.rng.pick(FAMILY_NAMES)} ${givenName(this.rng, g)}`, g,
       born: this.year - age, named: false, met: spec.met !== false, role: spec.role || 'acquaintance',
-      aff: spec.aff ?? 30, res: spec.res ?? 30, realm, stage: this.rng.int(0, 2), sect: spec.sect || null,
+      aff: spec.aff ?? 30, res: spec.res ?? 30, realm: clamp(realm, 0, 8), stage: this.rng.int(0, 2), sect: spec.sect || null,
       loc: spec.loc || L.loc, dead: false, romance: spec.romance ?? (Math.abs(age - this.age) <= 8 && this.age >= 15),
       traits: spec.traits || [this.rng.pick(['proud', 'kind', 'greedy', 'honest', 'cunning', 'loyal', 'hot-tempered', 'gentle', 'ambitious', 'cowardly'])],
       flags: {}, nick: spec.nick ? nickname(this.rng) : null, kind: spec.kind || null,

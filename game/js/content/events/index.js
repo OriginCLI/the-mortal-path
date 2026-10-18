@@ -2,8 +2,9 @@
 import { defineEvents } from '../../engine/registry.js';
 import witness from './witness.js';
 import childhood from './childhood.js';
+import sect from './sect.js';
 
-const FILES = { witness, childhood };
+const FILES = { witness, childhood, sect };
 
 let done = false;
 export function registerAllEvents() {

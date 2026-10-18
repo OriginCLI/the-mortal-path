@@ -214,6 +214,7 @@ export const cultivationSystem = {
     } else if (!L.focus) L.focus = id;
     if (!L.path && m.path !== 'any') L.path = m.path;
     this.log(`You learned the ${m.name}.`, 'learn', { manual: id });
+    if (m.cures && L.constitution === m.cures && !L.cured[m.cures]) { this.cure(m.cures); this.achieve('cured_cold'); }
     this.emit('sfx', 'qi');
     return true;
   },

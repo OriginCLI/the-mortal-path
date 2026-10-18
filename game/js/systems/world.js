@@ -137,9 +137,10 @@ export const worldSystem = {
 
   assignMaster() {
     const L = this.life;
+    if (L.realm >= 7) return; // nobody left to teach you
     const candidates = Object.values(L.npcs).filter((n) => !n.dead && n.sect === L.sect && n.realm >= Math.max(3, L.realm + 1) && this.npcAge(n) > this.age + 10);
     let m = candidates.sort((a, b) => b.realm - a.realm)[0];
-    if (!m) m = this.generateNpc({ g: this.rng.chance(0.5) ? 'm' : 'f', age: [45, 70], realm: Math.max(4, L.realm + 1), sect: L.sect, role: 'master', aff: 50, res: 60, romance: false });
+    if (!m) m = this.generateNpc({ g: this.rng.chance(0.5) ? 'm' : 'f', age: [45, 70], realm: Math.min(8, Math.max(4, L.realm + 1)), sect: L.sect, role: 'master', aff: 50, res: 60, romance: false });
     this.setRole(m, 'master');
     this.log(`${m.name}, ${REALMS[m.realm].name} realm, accepted you as a direct disciple.`, 'note', { npc: m.id });
   },

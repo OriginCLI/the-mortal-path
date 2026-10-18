@@ -9,7 +9,8 @@
 //   L(id, cat, if, text, fx, extra)   a log-only beat (no choice)
 export const E = (id, cat, props) => ({ id, cat, ...props });
 export const O = (text, fx = {}) => ({ text, ...fx });
-export const C = (t, r, extra = {}) => ({ t, r, ...extra });
+// A rolled choice passed as the outcome (C(label, P(label, …))) is used as-is.
+export const C = (t, r, extra = {}) => (r && r.t && (r.p != null || r.roll) ? { ...r, ...extra } : { t, r, ...extra });
 export const R = (t, stat, dc, ok, no, extra = {}) => ({ t, roll: { stat, dc }, ok, no, ...extra });
 export const P = (t, p, ok, no, extra = {}) => ({ t, p, ok, no, ...extra });
 export const M = (t, mem, r, extra = {}) => ({ t, show: { mem, ...(extra.show || {}) }, r, ...omit(extra, 'show') });
