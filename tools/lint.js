@@ -12,6 +12,7 @@ import { MANUALS } from '../game/js/content/martial.js';
 import { SECTS, LOCATIONS, FACTIONS, REGIONS } from '../game/js/content/world.js';
 import { ACHIEVEMENTS } from '../game/js/content/achievements.js';
 import { ACTIVITIES } from '../game/js/systems/life.js';
+import { GAMES } from '../game/js/content/minigames.js';
 
 const quiet = process.argv.includes('--quiet');
 const errors = [];
@@ -119,6 +120,8 @@ for (const ev of EVENTS.values()) {
   if (!CATEGORIES.includes(ev.cat)) err(w, `unknown category "${ev.cat}"`);
   if (ev.on) [].concat(ev.on).forEach((o) => { if (!ON_OK.has(o) && !String(o).startsWith('talk.')) err(w, `unknown trigger on: "${o}"`); });
   if (ev.art && !ARTS.has(ev.art)) err(w, `unknown art "${ev.art}"`);
+  if (ev.game && !GAMES.includes(ev.game)) err(w, `unknown mini-game "${ev.game}"`);
+  if (ev.game && !(ev.choices || []).some((c) => c.ok)) err(w, 'a mini-game needs at least one rolled choice (P or R) for its score to decide');
   if (!ev.text) err(w, 'missing text');
   checkText(w, ev.text);
   if (ev.title) checkText(w, ev.title);

@@ -19,6 +19,7 @@ const LOG_WINDOW = 400;
 export function mountGame(root, game, opts = {}) {
   const ui = new GameScreen(root, game, opts);
   ui.mount();
+  if (/[?&]debug\b/.test(location.search)) window.mortalPath = { game, ui }; // for browser tests
   return ui;
 }
 

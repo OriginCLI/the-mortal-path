@@ -13,6 +13,8 @@ import { MANUALS } from '../content/martial.js';
 
 export const LOG_LIMIT = 2500;
 export const EVENTS_PER_YEAR = 5;
+// Choices decided by a mini-game say so instead of hinting odds.
+const GAME_HINT = { meditate: 'a test of focus', forge: 'a test of timing', dice: 'a game of chance', riddle: 'a test of wit', exam: 'a test of learning' };
 
 export function createWheel({ name, family, gender, origin, mode = 'standard', seed, constitution }) {
   const s = (seed ?? Math.floor(Math.random() * 2 ** 32)) >>> 0;
@@ -391,7 +393,8 @@ export class Game {
         return {
           idx,
           label: this.fill(c.t, ctx),
-          hint: this.hintFor(c, ctx),
+          hint: ev.game && (c.ok || c.no) ? GAME_HINT[ev.game] : this.hintFor(c, ctx),
+          rolled: !!(c.ok || c.no),
           locked,
           need: locked ? describeReq(c.req, this) : '',
           memory: !!(c.show && (c.show.mem || c.show.meta)),

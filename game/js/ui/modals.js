@@ -8,6 +8,7 @@ import { refreshPanel } from './panels.js';
 import { CAT_LABEL } from '../engine/registry.js';
 import { REALMS } from '../content/realms.js';
 import { TECHS } from '../content/martial.js';
+import { RIDDLES, EXAMS } from '../content/minigames.js';
 import { slotSummaries, saveSlot, loadSlot, clearSlot, exportAll, importAll, clearActive } from '../core/store.js';
 
 let open = null;
@@ -42,7 +43,7 @@ export function openEventModal(ui, p) {
     const c = p.choices[i];
     if (!c || c.locked) return;
     director.sfx('select');
-    if (p.game) { runMinigame(p.game, (score) => { closeModal(); g.choose(i, score); afterEvent(ui); }); return; }
+    if (p.game && (c.rolled ?? true)) { runMinigame(p.game, (score) => { closeModal(); g.choose(i, score); afterEvent(ui); }, g); return; }
     closeModal();
     g.choose(i);
     afterEvent(ui);
@@ -68,36 +69,130 @@ function afterEvent(ui) {
   refreshPanel();
 }
 
-// A simple qi-circulation timing game: press when the light reaches the dantian, three times.
-function runMinigame(kind, done) {
+// Mini-games (see content/minigames.js). Each calls done(score) with a score from 0 to 1.
+function runMinigame(kind, done, g) {
+  if (kind === 'riddle') return runRiddles(done);
+  if (kind === 'exam') return runExam(done, g);
+  if (kind === 'dice') return runDiceGame(done);
+  return runTiming(kind, done);
+}
+
+// Timing: meditation (a light circling to the dantian) or forging (steel heating to white).
+function runTiming(kind, done) {
+  const forge = kind === 'forge';
   let hits = 0;
   let tries = 0;
-  let angle = 0;
+  let t = 0;
   let raf = 0;
   const canvas = h('canvas', { width: 480, height: 480, 'aria-hidden': 'true' });
-  const msg = h('p', { 'aria-live': 'polite' }, kind === 'forge' ? 'Strike when the steel glows brightest.' : 'Press when the light reaches the golden mark.');
+  const msg = h('p', { 'aria-live': 'polite' }, forge ? 'Strike when the steel glows white.' : 'Press when the light reaches the golden mark.');
+  const meditatePhase = () => (((t % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2));
+  const heat = () => (Math.sin(t * 1.3) + 1) / 2; // 0 cold … 1 white-hot
   const press = () => {
+    if (tries >= 3) return;
     tries += 1;
-    const d = Math.abs(((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2) - Math.PI * 1.5);
-    if (d < 0.35) { hits += 1; director.sfx('qi'); msg.textContent = 'Good.'; } else { director.sfx('click'); msg.textContent = 'Missed.'; }
-    if (tries >= 3) { cancelAnimationFrame(raf); setTimeout(() => done(hits / 3), 400); }
+    const good = forge ? heat() > 0.88 : Math.abs(meditatePhase() - Math.PI * 1.5) < 0.35;
+    if (good) { hits += 1; director.sfx(forge ? 'clash' : 'qi'); msg.textContent = forge ? 'The steel rang true.' : 'Good.'; }
+    else { director.sfx('click'); msg.textContent = forge ? 'A dull note. The steel was not ready.' : 'Missed.'; }
+    if (tries >= 3) { cancelAnimationFrame(raf); setTimeout(() => done(hits / 3), 500); }
   };
   const draw = () => {
     const c = canvas.getContext('2d');
     c.clearRect(0, 0, 480, 480);
-    c.strokeStyle = '#2a2420'; c.lineWidth = 6; c.beginPath(); c.arc(240, 240, 160, 0, Math.PI * 2); c.stroke();
-    c.strokeStyle = '#b5873a'; c.lineWidth = 18; c.beginPath(); c.arc(240, 240, 160, Math.PI * 1.5 - 0.35, Math.PI * 1.5 + 0.35); c.stroke();
-    const x = 240 + Math.cos(angle) * 160;
-    const y = 240 + Math.sin(angle) * 160;
-    const gr = c.createRadialGradient(x, y, 0, x, y, 30);
-    gr.addColorStop(0, 'rgba(216,169,74,1)'); gr.addColorStop(1, 'rgba(216,169,74,0)');
-    c.fillStyle = gr; c.beginPath(); c.arc(x, y, 30, 0, Math.PI * 2); c.fill();
-    angle += 0.045 + tries * 0.015;
+    if (forge) {
+      const k = heat();
+      // Embers' glow behind the work, soft at the edges.
+      const glow = c.createRadialGradient(220, 300, 0, 220, 300, 170);
+      glow.addColorStop(0, `rgba(255,${Math.round(140 + k * 100)},70,${0.08 + k * 0.4})`); glow.addColorStop(1, 'rgba(255,160,70,0)');
+      c.fillStyle = glow; c.fillRect(0, 100, 440, 380);
+      c.fillStyle = '#2a2420'; c.beginPath(); c.moveTo(60, 330); c.lineTo(380, 330); c.lineTo(350, 370); c.lineTo(90, 370); c.closePath(); c.fill(); // anvil face
+      c.fillRect(185, 370, 70, 60); c.fillRect(150, 430, 140, 18);
+      const r = Math.round(110 + k * 145); const gg = Math.round(40 + k * 205); const b = Math.round(25 + k * 200);
+      const steel = c.createLinearGradient(80, 0, 360, 0);
+      steel.addColorStop(0, '#4a403a'); steel.addColorStop(0.25, `rgb(${r},${gg},${b})`); steel.addColorStop(0.75, `rgb(${r},${gg},${b})`); steel.addColorStop(1, '#4a403a');
+      c.fillStyle = steel; c.beginPath(); c.moveTo(80, 312); c.lineTo(340, 306); c.lineTo(366, 316); c.lineTo(340, 326); c.lineTo(80, 322); c.closePath(); c.fill();
+      // Heat gauge: strike in the gold band.
+      c.fillStyle = 'rgba(42,36,32,0.15)'; c.fillRect(420, 120, 22, 300);
+      c.fillStyle = '#b5873a'; c.fillRect(416, 120, 30, 36);
+      c.fillStyle = `rgb(${r},${gg},${b})`; c.fillRect(420, 420 - k * 300, 22, k * 300);
+      c.strokeStyle = '#2a2420'; c.lineWidth = 2; c.strokeRect(420, 120, 22, 300);
+      for (let i = 0; i < 3; i++) { c.fillStyle = i < hits ? '#b5873a' : 'rgba(42,36,32,0.2)'; c.beginPath(); c.arc(180 + i * 40, 80, 11, 0, Math.PI * 2); c.fill(); }
+      t += 0.05 + tries * 0.012;
+    } else {
+      c.strokeStyle = '#2a2420'; c.lineWidth = 6; c.beginPath(); c.arc(240, 240, 160, 0, Math.PI * 2); c.stroke();
+      c.strokeStyle = '#b5873a'; c.lineWidth = 18; c.beginPath(); c.arc(240, 240, 160, Math.PI * 1.5 - 0.35, Math.PI * 1.5 + 0.35); c.stroke();
+      const x = 240 + Math.cos(t) * 160;
+      const y = 240 + Math.sin(t) * 160;
+      const gr = c.createRadialGradient(x, y, 0, x, y, 30);
+      gr.addColorStop(0, 'rgba(216,169,74,1)'); gr.addColorStop(1, 'rgba(216,169,74,0)');
+      c.fillStyle = gr; c.beginPath(); c.arc(x, y, 30, 0, Math.PI * 2); c.fill();
+      t += 0.045 + tries * 0.015;
+    }
     raf = requestAnimationFrame(draw);
   };
-  showModal([h('div', { class: 'modal-body minigame' }, h('h2', {}, kind === 'forge' ? 'At the anvil' : 'Circulate your qi'), canvas, msg,
-    h('button', { class: 'btn primary', onclick: press }, kind === 'forge' ? 'Strike' : 'Press'))], { label: 'Mini-game', onKey: (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); press(); } } });
+  showModal([h('div', { class: 'modal-body minigame' }, h('h2', {}, forge ? 'At the anvil' : 'Circulate your qi'), canvas, msg,
+    h('button', { class: 'btn primary', onclick: press }, forge ? 'Strike' : 'Press'))], { label: 'Mini-game', onKey: (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); press(); } } });
   draw();
+}
+
+// A question-and-answer game: three rounds, pick one of the offered answers.
+function runRounds({ title, label, rounds, render, finish }) {
+  let i = 0;
+  let total = 0;
+  const body = h('div', { class: 'modal-body minigame rounds' });
+  const step = () => {
+    if (i >= rounds.length) { finish(total); return; }
+    const r = rounds[i];
+    body.replaceChildren(
+      h('div', { class: 'cat' }, h('span', {}, label), h('span', {}, `${i + 1} of ${rounds.length}`)),
+      h('h2', {}, title), ...render(r),
+      h('div', { class: 'choices', role: 'group', 'aria-label': 'Answers' }, r.options.map((o, k) => h('button', { class: 'choice', onclick: () => {
+        total += o.score;
+        director.sfx(o.score > 0 ? 'select' : 'click');
+        i += 1;
+        step();
+      } }, h('span', {}, `${k + 1}. ${o.text}`)))));
+    requestAnimationFrame(() => body.querySelector('.choice')?.focus());
+  };
+  showModal([body], { label, onKey: (e) => { const n = Number(e.key); const b = body.querySelectorAll('.choice')[n - 1]; if (b) b.click(); } });
+  step();
+}
+
+function runRiddles(done) {
+  const pool = [...RIDDLES].sort(() => Math.random() - 0.5).slice(0, 3);
+  runRounds({ title: 'Riddles', label: 'A test of wit', rounds: pool.map((r) => ({ q: r.q, options: r.a.map((a, k) => ({ text: a, score: k === r.ok ? 1 : 0 })) })),
+    render: (r) => [h('p', { class: 'text riddle' }, `“${r.q}”`)], finish: (n) => { closeModal(); done(n / 3); } });
+}
+
+function runExam(done, g) {
+  const ex = EXAMS[Math.floor(Math.random() * EXAMS.length)];
+  // Insight lets you sense the best line (a small mark), as a scholar would.
+  const sharp = (g?.life.stats.insight || 0) >= 45;
+  runRounds({ title: 'The examination hall', label: 'Compose your essay', rounds: ex.parts.map((part) => ({ options: [...part].sort(() => Math.random() - 0.5).map(([text, score]) => ({ text: sharp && score === 2 ? `${text} ✓` : text, score })) })),
+    render: () => [h('p', { class: 'text' }, `Topic: ${ex.topic}.`), sharp ? h('p', { class: 'muted small' }, 'Your studies let you sense which line rings truest.') : null].filter(Boolean),
+    finish: (n) => { closeModal(); done(n / 6); } });
+}
+
+// Three throws of big-or-small; the score is the share you called right.
+function runDiceGame(done) {
+  let i = 0;
+  let wins = 0;
+  const dice = h('div', { class: 'dice', 'aria-live': 'polite' }, [1, 2, 3].map(() => h('span', { class: 'die' }, '?')));
+  const msg = h('p', {}, 'Three throws. Call big or small.');
+  const call = (guess) => {
+    if (i >= 3) return;
+    const r = [1, 2, 3].map(() => 1 + Math.floor(Math.random() * 6));
+    const sum = r[0] + r[1] + r[2];
+    const result = sum >= 11 ? 'big' : 'small';
+    [...dice.children].forEach((d, k) => { d.classList.remove('roll'); void d.offsetWidth; d.classList.add('roll'); d.textContent = r[k]; });
+    i += 1;
+    if (result === guess) wins += 1;
+    msg.textContent = `${sum}, ${result}. ${result === guess ? 'You called it.' : 'Wrong.'} (${i} of 3)`;
+    director.sfx(result === guess ? 'select' : 'click');
+    if (i >= 3) setTimeout(() => { closeModal(); done(wins / 3); }, 700);
+  };
+  showModal([h('div', { class: 'modal-body minigame' }, h('h2', {}, 'Big or small?'), msg, dice,
+    h('div', { class: 'choices' }, h('button', { class: 'choice', onclick: () => call('small') }, 'Small'), h('button', { class: 'choice', onclick: () => call('big') }, 'Big')))], { label: 'Dice' });
 }
 
 // ── Combat ────────────────────────────────────────────────────
