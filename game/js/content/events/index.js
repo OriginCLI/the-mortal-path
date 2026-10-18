@@ -3,8 +3,9 @@ import { defineEvents } from '../../engine/registry.js';
 import witness from './witness.js';
 import childhood from './childhood.js';
 import sect from './sect.js';
+import fortune from './fortune.js';
 
-const FILES = { witness, childhood, sect };
+const FILES = { witness, childhood, sect, fortune };
 
 let done = false;
 export function registerAllEvents() {

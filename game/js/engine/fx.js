@@ -45,7 +45,7 @@ const HANDLERS = {
   careerUp: (g, v) => g.careerXp(v),
   injury: (g, v) => g.injure(v),
   cripple: (g, v) => g.setCrippled(v),
-  cure: (g, v) => g.cure(v),
+  cure: (g, v) => asArray(v).forEach((x) => g.cure(x)),
   heal: (g, v) => { if (v) g.healFully(); },
   qiFill: (g, v) => g.addQi(v),
   realmUp: (g, v) => { if (v) g.forceBreakthrough(); },
