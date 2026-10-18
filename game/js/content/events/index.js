@@ -1,8 +1,9 @@
 // Registers every event file. Add new files here.
 import { defineEvents } from '../../engine/registry.js';
 import witness from './witness.js';
+import childhood from './childhood.js';
 
-const FILES = { witness };
+const FILES = { witness, childhood };
 
 let done = false;
 export function registerAllEvents() {
