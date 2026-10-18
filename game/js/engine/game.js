@@ -416,6 +416,8 @@ export class Game {
   // Odds hints (spec: "Hinted"). Explicit hint wins; otherwise derived from the roll.
   hintFor(c, ctx) {
     if (c.hint) return c.hint;
+    const fight = c.r?.combat || c.fx?.combat;
+    if (fight) return this.fightWord(fight, ctx);
     const p = this.choiceOdds(c, ctx);
     if (p == null) return '';
     if (p >= 0.8) return 'likely';

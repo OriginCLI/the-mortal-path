@@ -59,7 +59,9 @@ function resolvePending(g) {
   if (!p) return;
   if (p.kind === 'event') {
     const ok = p.choices.map((c, i) => [c, i]).filter(([c]) => !c.locked);
-    const [, i] = policy.pick(ok);
+    // A sensible player usually avoids choices hinted as deadly or badly outmatched.
+    const scary = (c) => /deadly|outmatched|very risky/.test(c.hint || '');
+    const [, i] = policy.weighted(ok, ([c]) => (scary(c) ? 0.15 : 1));
     out.choices++;
     g.choose(i, p.game ? policy.next() : null);
   } else if (p.kind === 'combat') {

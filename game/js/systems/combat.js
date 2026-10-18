@@ -75,6 +75,21 @@ export const combatSystem = {
     this.emit('pending', L.pending);
   },
 
+  // A rough read of a fight before it starts, for choice hints (never numbers).
+  fightWord(spec, ctx = {}) {
+    let realm = this.life.realm;
+    const f = spec.foe;
+    if (typeof f === 'string') realm = this.resolveNpc(f, ctx)?.realm ?? (ctx.bind?.[f]?.new?.realm ?? realm);
+    else if (f) realm = f.rel != null ? this.life.realm + f.rel : (Array.isArray(f.realm) ? f.realm[0] : f.realm ?? realm);
+    realm = Math.max(0, Math.min(8, Math.round(realm)));
+    const ratio = this.power() / (REALMS[realm].power * 1.1 + 5);
+    const lethal = (spec.lethal ?? CONTEXT_LETHAL[spec.context] ?? 0.2) >= 0.4;
+    if (ratio >= 1.35) return lethal ? 'a fight you should win' : 'you should win';
+    if (ratio >= 0.85) return lethal ? 'an even fight, to the death' : 'an even fight';
+    if (ratio >= 0.6) return lethal ? 'a hard fight, and a deadly one' : 'a hard fight';
+    return lethal ? 'a deadly fight' : 'you are badly outmatched';
+  },
+
   combatTitle(context, foe) {
     return { spar: `Sparring with ${foe.name}`, duel: `A duel with ${foe.name}`, tournament: `Tournament bout: ${foe.name}`, ambush: `Ambush! ${foe.name}`,
       war: `Battle: ${foe.name}`, assassination: `Assassin: ${foe.name}`, beast: `${foe.name}`, nemesis: `${foe.name}` }[context] || foe.name;

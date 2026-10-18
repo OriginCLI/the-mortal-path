@@ -71,7 +71,9 @@ export const npcSystem = {
   generateNpc(spec = {}) {
     const L = this.life;
     const g = spec.g === 'm' || spec.g === 'f' ? spec.g : (this.rng.chance(0.5) ? 'm' : 'f');
-    const age = Array.isArray(spec.age) ? this.rng.int(spec.age[0], spec.age[1]) : spec.age ?? this.rng.int(Math.max(12, this.age - 6), this.age + 12);
+    // age: absolute range; ageRel: range relative to your own age.
+    const age = spec.ageRel ? Math.max(spec.minAge ?? 12, this.age + this.rng.int(spec.ageRel[0], spec.ageRel[1]))
+      : Array.isArray(spec.age) ? this.rng.int(spec.age[0], spec.age[1]) : spec.age ?? this.rng.int(Math.max(12, this.age - 6), this.age + 12);
     const id = `n${L.nextNpc++}`;
     const realm = spec.realm != null
       ? (Array.isArray(spec.realm) ? this.rng.int(spec.realm[0], spec.realm[1]) : spec.realm)
