@@ -6,8 +6,9 @@ import sect from './sect.js';
 import fortune from './fortune.js';
 import mysteries from './mysteries.js';
 import bonds from './bonds.js';
+import jianghu from './jianghu.js';
 
-const FILES = { witness, childhood, sect, fortune, mysteries, bonds };
+const FILES = { witness, childhood, sect, fortune, mysteries, bonds, jianghu };
 
 let done = false;
 export function registerAllEvents() {
