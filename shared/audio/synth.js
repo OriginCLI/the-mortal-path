@@ -1,7 +1,19 @@
 // All sound is synthesized here with the Web Audio API. No audio files anywhere.
 // Instruments: plucked zither (Karplus-Strong), bamboo flute, bowed fiddle, gong, temple bell,
 // barrel drum, woodblock, metallic clash, sword swish, drones; plus ambient beds and a theme generator.
-import { rng } from './dom.js';
+// Tiny seeded PRNG (mulberry32) so generated themes are repeatable.
+function rng(seed = 1) {
+  let a = seed >>> 0;
+  const next = () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  next.pick = (arr) => arr[Math.floor(next() * arr.length)];
+  return next;
+}
 
 let ctx = null;
 let bus = null;       // instruments -> bus -> (dry + reverb) -> master

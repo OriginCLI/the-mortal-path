@@ -5,7 +5,7 @@ import { TRIALS, realmFor, trialById } from './trials.js';
 import { load, save, freshState, defaultAnswers } from './state.js';
 import { renderQuestion, renderNotes } from './widgets.js';
 import { PREVIEWS } from './previews/index.js';
-import * as audio from './audio.js';
+import * as audio from '../../shared/audio/synth.js';
 import { backdropSVG, pathMapSVG, sealSVG, startQiField } from './art.js';
 import { buildMarkdown, buildJSON, parseImport, rawExport } from './spec.js';
 

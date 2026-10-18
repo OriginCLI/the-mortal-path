@@ -1,0 +1,11 @@
+{
+  "name": "the-mortal-path",
+  "private": true,
+  "type": "module",
+  "description": "A murim life simulator. Plain HTML/CSS/JS; this file only marks .js as ES modules for the Node-based dev tools (no dependencies).",
+  "scripts": {
+    "lint": "node tools/lint.js",
+    "sim": "node tools/sim.js",
+    "check": "node tools/lint.js && node tools/sim.js --lives 300"
+  }
+}

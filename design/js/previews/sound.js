@@ -1,7 +1,7 @@
 // Audio preview: instrument samples, a generated theme, ambient beds and UI sound effects,
 // all synthesized live, with an oscilloscope drawn from the output.
 import { h, reducedMotion } from '../dom.js';
-import * as audio from '../audio.js';
+import * as audio from '../../../shared/audio/synth.js';
 
 const INST = { pluck: 'Zither', flute: 'Flute', bowed: 'Fiddle', bells: 'Gong & bell', drums: 'Drums' };
 const AMB = { wind: 'Wind', rain: 'Rain', birds: 'Birds', fire: 'Fire', temple: 'Temple' };

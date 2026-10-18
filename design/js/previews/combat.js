@@ -1,7 +1,7 @@
 // Combat preview: a playable mini-duel in whichever system is selected, using the chosen
 // length, lethality, information display, technique naming and ways out.
 import { h, rng } from '../dom.js';
-import { sfx } from '../audio.js';
+import { sfx } from '../../../shared/audio/synth.js';
 import { filler, termsFor } from './lore.js';
 
 const TECH = {

@@ -1,7 +1,7 @@
 // Cultivation preview: the realm staircase with projected ages, breakthrough odds,
 // and a live "attempt breakthrough" roll that uses the chosen deviation outcomes.
 import { h, esc } from '../dom.js';
-import { sfx } from '../audio.js';
+import { sfx } from '../../../shared/audio/synth.js';
 import { ladderFor, realmAges, lifespanAt, breakthroughOdds } from './lore.js';
 import { chip } from './tone.js';
 
