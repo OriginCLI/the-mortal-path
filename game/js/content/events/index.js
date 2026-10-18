@@ -4,8 +4,9 @@ import witness from './witness.js';
 import childhood from './childhood.js';
 import sect from './sect.js';
 import fortune from './fortune.js';
+import mysteries from './mysteries.js';
 
-const FILES = { witness, childhood, sect, fortune };
+const FILES = { witness, childhood, sect, fortune, mysteries };
 
 let done = false;
 export function registerAllEvents() {
