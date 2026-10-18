@@ -16,7 +16,8 @@ cards, sliders, rankings and notes, with live previews: sample event text, a fac
 synthesized music and sound, combat demos, and a lifespan simulation. At the end it generates a design
 spec as Markdown and JSON.
 
-**Phase 2: The game (not started).** It will be built from `docs/design-spec.md` once that exists.
+**Phase 2: The game (planned).** The finished spec is in [`docs/design-spec.md`](docs/design-spec.md), and the
+proposed plan for the complete game is in [`docs/game-plan.md`](docs/game-plan.md), awaiting approval.
 
 ## Playing / using it
 
